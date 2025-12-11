@@ -1,0 +1,9 @@
+{
+  "name": "com.applauncher.host",
+  "description": "App Launcher Native Messaging Host",
+  "path": "E:\\AppLauncher\\native-host\\run_host.bat",
+  "type": "stdio",
+  "allowed_extensions": [
+    "applauncher@example.com"
+  ]
+}

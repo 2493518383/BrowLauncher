@@ -1,0 +1,586 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>定时任务管理 - {{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        .task-card {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .task-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+        .task-status {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-waiting { background: #ffc107; color: #000; }
+        .status-running { background: #17a2b8; color: #fff; }
+        .status-completed { background: #28a745; color: #fff; }
+        .status-failed { background: #dc3545; color: #fff; }
+        .status-disabled { background: #6c757d; color: #fff; }
+        .task-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .info-item {
+            color: #ccc;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #00ff00;
+        }
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-toggle {
+            background: #ffc107;
+            color: #000;
+        }
+        .btn-edit {
+            background: #17a2b8;
+            color: #fff;
+        }
+        .btn-delete {
+            background: #dc3545;
+            color: #fff;
+        }
+        .btn-logs {
+            background: #6f42c1;
+            color: #fff;
+        }
+        .create-form {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            margin-bottom: 5px;
+            color: #00ff00;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .schedule-options {
+            display: none;
+        }
+        .schedule-options.active {
+            display: block;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+        .modal-content {
+            background-color: #2a2a2a;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            color: #fff;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: #fff;
+        }
+        .logs-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-left: 3px solid #00ff00;
+            background: #2a2a2a;
+        }
+        .log-time {
+            color: #888;
+            font-size: 12px;
+        }
+        .log-message {
+            color: #fff;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>定时任务管理</h1>
+            <div class="nav">
+                <a href="/" class="nav-link">首页</a>
+                <a href="/scan" class="nav-link">新建扫描</a>
+                <a href="/logs" class="nav-link">扫描日志</a>
+                <a href="/reports" class="nav-link">扫描报告</a>
+                <a href="/scheduled-tasks" class="nav-link active">定时任务</a>
+                <a href="/logout" class="nav-link">退出登录</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- 创建任务表单 -->
+            <div class="create-form">
+                <h3>创建定时任务</h3>
+                <form id="createTaskForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="taskName">任务名称</label>
+                            <input type="text" id="taskName" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskTarget">扫描目标</label>
+                            <input type="text" id="taskTarget" name="target" placeholder="IP地址、域名或CIDR" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="scheduleType">调度类型</label>
+                            <select id="scheduleType" name="schedule_type" onchange="toggleScheduleOptions()">
+                                <option value="once">一次性任务</option>
+                                <option value="interval">间隔任务</option>
+                            </select>
+                        </div>
+                        <div class="form-group schedule-options" id="onceOptions">
+                            <label for="scheduleTime">执行时间</label>
+                            <input type="datetime-local" id="scheduleTime" name="schedule_time">
+                        </div>
+                        <div class="form-group schedule-options" id="intervalOptions">
+                            <label for="interval">间隔时间（分钟）</label>
+                            <input type="number" id="interval" name="interval" min="1" placeholder="60">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="webhookUrl">钉钉机器人Webhook（可选）</label>
+                            <input type="url" id="webhookUrl" name="webhook_url" placeholder="https://oapi.dingtalk.com/robot/send?access_token=...">
+                        </div>
+                        <div class="form-group">
+                            <label for="enabled">启用任务</label>
+                            <select id="enabled" name="enabled">
+                                <option value="true">启用</option>
+                                <option value="false">禁用</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">创建任务</button>
+                </form>
+            </div>
+
+            <!-- 任务列表 -->
+            <div id="tasksList">
+                <!-- 任务卡片将通过JavaScript动态加载 -->
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>https://github.com/kk12-30/Dscan</p>
+        </div>
+    </div>
+
+    <!-- 编辑任务模态框 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h3>编辑任务</h3>
+            <form id="editTaskForm">
+                <input type="hidden" id="editTaskId">
+                <div class="form-group">
+                    <label for="editTaskName">任务名称</label>
+                    <input type="text" id="editTaskName" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="editTaskTarget">扫描目标</label>
+                    <input type="text" id="editTaskTarget" name="target" required>
+                </div>
+                <div class="form-group">
+                    <label for="editWebhookUrl">钉钉机器人Webhook</label>
+                    <input type="url" id="editWebhookUrl" name="webhook_url">
+                </div>
+                <div class="form-group">
+                    <label for="editInterval">间隔时间（分钟）</label>
+                    <input type="number" id="editInterval" name="interval" min="1">
+                </div>
+                <button type="submit" class="btn">保存修改</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 任务日志模态框 -->
+    <div id="logsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeLogsModal()">&times;</span>
+            <h3>任务日志</h3>
+            <div id="taskLogs" class="logs-container">
+                <!-- 日志内容将通过JavaScript动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = [];
+
+        // 页面加载时获取任务列表
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTasks();
+            toggleScheduleOptions(); // 初始化调度选项显示
+        });
+
+        // 切换调度选项显示
+        function toggleScheduleOptions() {
+            const scheduleType = document.getElementById('scheduleType').value;
+            const onceOptions = document.getElementById('onceOptions');
+            const intervalOptions = document.getElementById('intervalOptions');
+            
+            if (scheduleType === 'once') {
+                onceOptions.classList.add('active');
+                intervalOptions.classList.remove('active');
+            } else {
+                onceOptions.classList.remove('active');
+                intervalOptions.classList.add('active');
+            }
+        }
+
+        // 加载任务列表
+        function loadTasks() {
+            fetch('/api/scheduled-tasks')
+                .then(response => response.json())
+                .then(data => {
+                    tasks = data.tasks || [];
+                    renderTasks();
+                })
+                .catch(error => {
+                    console.error('加载任务失败:', error);
+                    alert('加载任务失败');
+                });
+        }
+
+        // 渲染任务列表
+        function renderTasks() {
+            const tasksList = document.getElementById('tasksList');
+            if (tasks.length === 0) {
+                tasksList.innerHTML = '<p style="text-align: center; color: #888;">暂无定时任务</p>';
+                return;
+            }
+
+            var html = '';
+            tasks.forEach(function(task) {
+                html += '<div class="task-card">' +
+                    '<div class="task-header">' +
+                        '<div class="task-name">' + task.name + '</div>' +
+                        '<div class="task-status status-' + task.status + '">' + getStatusText(task.status) + '</div>' +
+                    '</div>' +
+                    '<div class="task-info">' +
+                        '<div class="info-item">' +
+                            '<span class="info-label">扫描目标:</span> ' + task.target +
+                        '</div>' +
+                        '<div class="info-item">' +
+                            '<span class="info-label">调度类型:</span> ' + (task.schedule_type === 'once' ? '一次性' : '间隔') +
+                        '</div>' +
+                        '<div class="info-item">' +
+                            '<span class="info-label">创建时间:</span> ' + formatTime(task.created_at) +
+                        '</div>' +
+                        '<div class="info-item">' +
+                            '<span class="info-label">下次运行:</span> ' + formatTime(task.next_run) +
+                        '</div>';
+                
+                if (task.last_run) {
+                    html += '<div class="info-item">' +
+                        '<span class="info-label">最后运行:</span> ' + formatTime(task.last_run) +
+                    '</div>';
+                }
+                
+                if (task.schedule_type === 'interval') {
+                    html += '<div class="info-item">' +
+                        '<span class="info-label">间隔时间:</span> ' + task.interval + ' 分钟' +
+                    '</div>';
+                }
+                
+                html += '</div>' +
+                    '<div class="task-actions">' +
+                        '<button class="btn-small btn-toggle" onclick="toggleTask(\'' + task.id + '\')">' +
+                            (task.enabled ? '禁用' : '启用') +
+                        '</button>' +
+                        '<button class="btn-small btn-edit" onclick="editTask(\'' + task.id + '\')">编辑</button>' +
+                        '<button class="btn-small btn-logs" onclick="viewLogs(\'' + task.id + '\')">日志</button>' +
+                        '<button class="btn-small btn-delete" onclick="deleteTask(\'' + task.id + '\')">删除</button>' +
+                    '</div>' +
+                '</div>';
+            });
+            tasksList.innerHTML = html;
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'waiting': '等待中',
+                'running': '运行中',
+                'completed': '已完成',
+                'failed': '失败',
+                'disabled': '已禁用'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 格式化时间
+        function formatTime(timeStr) {
+            if (!timeStr) return '-';
+            const date = new Date(timeStr);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 创建任务
+        document.getElementById('createTaskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const taskData = {
+                name: formData.get('name'),
+                target: formData.get('target'),
+                schedule_type: formData.get('schedule_type'),
+                schedule_time: formData.get('schedule_time'),
+                interval: parseInt(formData.get('interval')) || 0,
+                webhook_url: formData.get('webhook_url'),
+                enabled: formData.get('enabled') === 'true'
+            };
+
+            fetch('/api/scheduled-tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(taskData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('任务创建成功');
+                    this.reset();
+                    loadTasks();
+                } else {
+                    alert('创建失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('创建任务失败:', error);
+                alert('创建任务失败');
+            });
+        });
+
+        // 切换任务状态
+        function toggleTask(taskId) {
+            fetch('/api/scheduled-tasks/' + taskId + '/toggle', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadTasks();
+                } else {
+                    alert('操作失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('切换任务状态失败:', error);
+                alert('操作失败');
+            });
+        }
+
+        // 编辑任务
+        function editTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('editTaskId').value = task.id;
+            document.getElementById('editTaskName').value = task.name;
+            document.getElementById('editTaskTarget').value = task.target;
+            document.getElementById('editWebhookUrl').value = task.webhook_url || '';
+            document.getElementById('editInterval').value = task.interval || '';
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        // 关闭编辑模态框
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // 保存编辑
+        document.getElementById('editTaskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const taskId = document.getElementById('editTaskId').value;
+            const formData = new FormData(this);
+            const updateData = {
+                name: formData.get('name'),
+                target: formData.get('target'),
+                webhook_url: formData.get('webhook_url'),
+                interval: parseInt(formData.get('interval')) || 0
+            };
+
+            fetch('/api/scheduled-tasks/' + taskId, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updateData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('任务更新成功');
+                    closeEditModal();
+                    loadTasks();
+                } else {
+                    alert('更新失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('更新任务失败:', error);
+                alert('更新任务失败');
+            });
+        });
+
+        // 删除任务
+        function deleteTask(taskId) {
+            if (!confirm('确定要删除这个任务吗？')) return;
+
+            fetch('/api/scheduled-tasks/' + taskId, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('任务删除成功');
+                    loadTasks();
+                } else {
+                    alert('删除失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('删除任务失败:', error);
+                alert('删除任务失败');
+            });
+        }
+
+        // 查看任务日志
+        function viewLogs(taskId) {
+            fetch('/api/task-logs?taskId=' + taskId)
+                .then(response => response.json())
+                .then(data => {
+                    const logs = data.logs || [];
+                    const logsContainer = document.getElementById('taskLogs');
+                    
+                    if (logs.length === 0) {
+                        logsContainer.innerHTML = '<p style="text-align: center; color: #888;">暂无日志记录</p>';
+                    } else {
+                        var logsHtml = '';
+                    logs.forEach(function(log) {
+                        logsHtml += '<div class="log-entry">' +
+                            '<div class="log-time">' + formatTime(log.start_time) + '</div>' +
+                            '<div class="log-message">' +
+                                '<strong>状态:</strong> ' + getStatusText(log.status) + '<br>' +
+                                '<strong>消息:</strong> ' + log.message;
+                        
+                        if (log.log_file) {
+                            logsHtml += '<br><strong>日志文件:</strong> ' + log.log_file;
+                        }
+                        
+                        logsHtml += '</div></div>';
+                    });
+                    logsContainer.innerHTML = logsHtml;
+                    }
+                    
+                    document.getElementById('logsModal').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('加载日志失败:', error);
+                    alert('加载日志失败');
+                });
+        }
+
+        // 关闭日志模态框
+        function closeLogsModal() {
+            document.getElementById('logsModal').style.display = 'none';
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const editModal = document.getElementById('editModal');
+            const logsModal = document.getElementById('logsModal');
+            if (event.target === editModal) {
+                closeEditModal();
+            }
+            if (event.target === logsModal) {
+                closeLogsModal();
+            }
+        }
+
+        // 定期刷新任务状态
+        setInterval(loadTasks, 30000); // 每30秒刷新一次
+    </script>
+</body>
+</html>

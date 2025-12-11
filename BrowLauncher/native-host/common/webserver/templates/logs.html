@@ -1,0 +1,118 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <script src="/static/js/main.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Dscan攻击面管理系统 - 实时日志</h1>
+            <div class="nav">
+                <a href="/">首页</a>
+                <a href="/logs">日志</a>
+                <a href="/reports">报告</a>
+                <a href="/scan">新建扫描</a>
+                <a href="/scheduled-tasks">定时任务</a>
+                <a href="/search_engine">搜索引擎</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">扫描日志实时监控</h2>
+                <div>
+                    <span class="badge badge-success" id="status-badge">实时更新中</span>
+                    <span style="margin-left: 10px; font-size: 14px; color: #78909c;">最后更新: <span id="last-update">{{.CurrentTime}}</span></span>
+                </div>
+            </div>
+            
+            <div id="log-content" class="log-container">{{.LogContent}}</div>
+            
+            <div style="margin-top: 15px; text-align: right;">
+                <button id="pause-btn" class="btn btn-secondary" onclick="togglePause()">暂停更新</button>
+                <button class="btn" onclick="scrollToBottom()">滚动到底部</button>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>https://github.com/kk12-30/Dscan</p>
+        </div>
+    </div>
+    
+    <script>
+    let isPaused = false;
+    
+    function togglePause() {
+        isPaused = !isPaused;
+        const btn = document.getElementById('pause-btn');
+        const badge = document.getElementById('status-badge');
+        
+        if (isPaused) {
+            btn.textContent = '恢复更新';
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('btn-danger');
+            badge.textContent = '已暂停';
+            badge.classList.remove('badge-success');
+            badge.classList.add('badge-warning');
+        } else {
+            btn.textContent = '暂停更新';
+            btn.classList.remove('btn-danger');
+            btn.classList.add('btn-secondary');
+            badge.textContent = '实时更新中';
+            badge.classList.remove('badge-warning');
+            badge.classList.add('badge-success');
+            refreshLogs(); // 立即刷新一次
+        }
+    }
+    
+    function scrollToBottom() {
+        const logContainer = document.getElementById('log-content');
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    
+    // 覆盖main.js中的refreshLogs函数
+    function refreshLogs() {
+        if (isPaused) return;
+        
+        fetch('/api/logs')
+            .then(response => response.json())
+            .then(data => {
+                const logContainer = document.getElementById('log-content');
+                if (logContainer && data.content) {
+                    logContainer.textContent = data.content;
+                    
+                    // 只有当滚动条在底部附近时才自动滚动
+                    const isAtBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 50;
+                    if (isAtBottom) {
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                    }
+                    
+                    // 更新最后更新时间
+                    const lastUpdate = document.getElementById('last-update');
+                    if (lastUpdate) {
+                        lastUpdate.textContent = new Date().toLocaleTimeString();
+                    }
+                }
+            })
+            .catch(error => console.error('获取日志失败:', error));
+    }
+    
+    // 启动日志刷新
+    document.addEventListener('DOMContentLoaded', function() {
+        const logContainer = document.getElementById('log-content');
+        if (logContainer) {
+            // 初始滚动到底部
+            scrollToBottom();
+            
+            // 每秒刷新一次日志
+            setInterval(refreshLogs, 1000);
+        }
+    });
+    </script>
+</body>
+</html>

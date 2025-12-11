@@ -1,0 +1,308 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Dscan攻击面管理系统 - 控制面板</h1>
+            <div class="nav">
+                <a href="/">首页</a>
+                <a href="/logs">日志</a>
+                <a href="/reports">报告</a>
+                <a href="/scan">新建扫描</a>
+                <a href="/poc-management">POC管理</a>
+                <a href="/scheduled-tasks">定时任务</a>
+                <a href="/search_engine">搜索引擎</a>
+            </div>
+        </div>
+        
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-label">发现IP</div>
+                <div class="stat-value">{{.IPCount}}</div>
+                <div class="stat-label">资产数量</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">开放端口</div>
+                <div class="stat-value">{{.PortCount}}</div>
+                <div class="stat-label">服务数量</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">发现漏洞</div>
+                <div class="stat-value">{{.VulnCount}}</div>
+                <div class="stat-label">安全风险</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">正在运行</div>
+                <div class="stat-value">{{len .RunningScans}}</div>
+                <div class="stat-label">扫描任务</div>
+            </div>
+        </div>
+        
+        <!-- ECharts 图表区域 -->
+        <div class="card">
+            <h2>资产统计图表</h2>
+            <div class="chart-container">
+                <div id="assetChart" style="width: 100%; height: 400px;"></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>漏洞风险分布</h2>
+            <div class="chart-container">
+                <div id="vulnChart" style="width: 100%; height: 350px;"></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>正在运行的扫描任务</h2>
+            {{if .RunningScans}}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>任务ID</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {{range $index, $scanID := .RunningScans}}
+                        <tr>
+                            <td>{{$scanID}}</td>
+                            <td><span class="badge badge-success">运行中</span></td>
+                        </tr>
+                    {{end}}
+                    </tbody>
+                </table>
+            {{else}}
+                <div class="alert">
+                    <p>当前没有正在运行的扫描任务</p>
+                </div>
+            {{end}}
+            <div style="text-align: right; margin-top: 15px;">
+                <a href="/scan" class="btn">新建扫描</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>最近发现的漏洞</h2>
+            {{if .Vulnerabilities}}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>类型</th>
+                            <th>目标</th>
+                            <th>风险等级</th>
+                            <th>发现时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {{range $index, $vuln := .Vulnerabilities}}
+                        {{if lt $index 10}}
+                        <tr>
+                            <td>{{$vuln.Type}}</td>
+                            <td style="max-width: 300px; word-break: break-all;">{{$vuln.Target}}</td>
+                            <td>
+                                <span class="badge" style="background-color: {{$vuln.SeverityColor}}; color: white;">
+                                    {{if eq $vuln.Severity "high"}}高危{{else if eq $vuln.Severity "medium"}}中危{{else if eq $vuln.Severity "low"}}低危{{else if eq $vuln.Severity "info"}}信息{{else}}未知{{end}}
+                                </span>
+                            </td>
+                            <td>{{$vuln.Time}}</td>
+                        </tr>
+                        {{end}}
+                    {{end}}
+                    </tbody>
+                </table>
+            {{else}}
+                <div class="alert">
+                    <p>暂未发现安全漏洞</p>
+                </div>
+            {{end}}
+        </div>
+        
+        <div class="card">
+            <h2>最新报告</h2>
+            {{if .Reports}}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>报告名称</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {{range $index, $report := .Reports}}
+                        {{if lt $index 5}}
+                        <tr>
+                            <td>{{$report}}</td>
+                            <td><a href="/reports/{{$report}}" class="btn btn-secondary">查看</a></td>
+                        </tr>
+                        {{end}}
+                    {{end}}
+                    </tbody>
+                </table>
+            {{else}}
+                <div class="alert">
+                    <p>没有可用的报告</p>
+                </div>
+            {{end}}
+            <div style="text-align: right; margin-top: 15px;">
+                <a href="/reports" class="btn">查看所有报告</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>https://github.com/kk12-30/Dscan</p>
+        </div>
+    </div>
+    
+    <script>
+    // 添加一个格式化时间的函数
+    function formatTime(timeString) {
+        const date = new Date(timeString);
+        return date.toLocaleString();
+    }
+    
+    // 初始化ECharts图表
+    document.addEventListener('DOMContentLoaded', function() {
+        // 资产统计柱状图
+        const assetChart = echarts.init(document.getElementById('assetChart'));
+        const assetOption = {
+            title: {
+                text: '资产发现统计',
+                left: 'center',
+                textStyle: {
+                    color: '#333',
+                    fontSize: 18
+                }
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            legend: {
+                data: ['数量'],
+                top: '10%'
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: '20%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: ['发现IP', '开放端口', '发现漏洞'],
+                axisLabel: {
+                    color: '#666'
+                }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: {
+                    color: '#666'
+                }
+            },
+            series: [{
+                name: '数量',
+                type: 'bar',
+                data: [{{.IPCount}}, {{.PortCount}}, {{.VulnCount}}],
+                itemStyle: {
+                    color: function(params) {
+                        const colors = ['#5470c6', '#91cc75', '#fac858'];
+                        return colors[params.dataIndex];
+                    }
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    color: '#333'
+                }
+            }]
+        };
+        assetChart.setOption(assetOption);
+        
+        // 漏洞风险分布饼图
+        const vulnChart = echarts.init(document.getElementById('vulnChart'));
+        {{if .Vulnerabilities}}
+        const vulnData = {
+            high: 0,
+            medium: 0,
+            low: 0,
+            info: 0
+        };
+        {{range .Vulnerabilities}}
+        vulnData.{{.Severity}}++;
+        {{end}}
+        {{else}}
+        const vulnData = { high: 0, medium: 0, low: 0, info: 0 };
+        {{end}}
+        
+        const vulnOption = {
+            title: {
+                text: '漏洞风险等级分布',
+                left: 'center',
+                textStyle: {
+                    color: '#333',
+                    fontSize: 18
+                }
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            legend: {
+                orient: 'vertical',
+                left: 'left',
+                top: 'middle'
+            },
+            series: [{
+                name: '漏洞数量',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['60%', '50%'],
+                avoidLabelOverlap: false,
+                label: {
+                    show: false,
+                    position: 'center'
+                },
+                emphasis: {
+                    label: {
+                        show: true,
+                        fontSize: '18',
+                        fontWeight: 'bold'
+                    }
+                },
+                labelLine: {
+                    show: false
+                },
+                data: [
+                    {value: vulnData.high, name: '高危', itemStyle: {color: '#e53935'}},
+                    {value: vulnData.medium, name: '中危', itemStyle: {color: '#fb8c00'}},
+                    {value: vulnData.low, name: '低危', itemStyle: {color: '#fdd835'}},
+                    {value: vulnData.info, name: '信息', itemStyle: {color: '#8d6e63'}}
+                ]
+            }]
+        };
+        vulnChart.setOption(vulnOption);
+        
+        // 响应式调整
+        window.addEventListener('resize', function() {
+            assetChart.resize();
+            vulnChart.resize();
+        });
+    });
+    </script>
+</body>
+</html>

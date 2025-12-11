@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BrowLauncher</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>BrowLauncher</h1>
+      <div class="header-buttons">
+        <button id="addCategoryBtn" class="icon-btn" title="添加分类">+📁</button>
+        <button id="addAppBtn" class="icon-btn" title="添加应用">+📱</button>
+        <button id="settingsBtn" class="icon-btn" title="设置">⚙️</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="sidebar" id="sidebar">
+        <!-- 分类列表 -->
+      </div>
+      <div class="content" id="content">
+        <!-- 应用列表 -->
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <span id="statusBar">就绪</span>
+      <span id="aboutBtn" class="about-link">关于作者</span>
+    </div>
+  </div>
+
+  <!-- 关于对话框 -->
+  <div class="modal" id="aboutModal">
+    <div class="modal-content about-content">
+      <h3>关于 BrowLauncher</h3>
+      <div class="about-info">
+        <p><strong>作者：</strong>花雨sec</p>
+        <p><strong>微信：</strong>byzy1010</p>
+		<p><strong>背景：</strong>因为菜鸟作者在打项目和攻防的时候，觉得浏览器老是要切屏目录，或者打开Launcher类的程序老费劲儿了，有感创作。</p>
+        <p class="about-version">Version 1.0.0</p>
+      </div>
+      <div class="modal-buttons">
+        <button id="closeAboutBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加分类对话框 -->
+  <div class="modal" id="categoryModal">
+    <div class="modal-content">
+      <h3>添加分类</h3>
+      <input type="text" id="categoryName" placeholder="分类名称">
+      <div class="modal-buttons">
+        <button id="saveCategoryBtn">保存</button>
+        <button id="cancelCategoryBtn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加应用对话框 -->
+  <div class="modal" id="appModal">
+    <div class="modal-content">
+      <h3>添加应用</h3>
+      <input type="text" id="appName" placeholder="应用名称">
+      <input type="text" id="appPath" placeholder="应用路径 (如: C:\Program Files\app.exe)">
+      <input type="text" id="appArgs" placeholder="启动参数 (可选)">
+      <select id="appCategory">
+        <!-- 分类选项 -->
+      </select>
+      <div class="modal-buttons">
+        <button id="saveAppBtn">保存</button>
+        <button id="cancelAppBtn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑对话框 -->
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <h3 id="editModalTitle">编辑</h3>
+      <input type="text" id="editName" placeholder="名称">
+      <input type="text" id="editPath" placeholder="路径" style="display:none;">
+      <input type="text" id="editArgs" placeholder="启动参数" style="display:none;">
+      <div class="modal-buttons">
+        <button id="saveEditBtn">保存</button>
+        <button id="deleteEditBtn" class="danger">删除</button>
+        <button id="cancelEditBtn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

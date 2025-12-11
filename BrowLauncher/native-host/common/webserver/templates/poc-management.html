@@ -1,0 +1,433 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        .poc-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .poc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .poc-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .poc-search {
+            padding: 8px 12px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+            width: 200px;
+        }
+        .poc-filter {
+            padding: 8px 12px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+        }
+        .poc-upload {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .poc-upload input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        .poc-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #2a2a2a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .poc-table th,
+        .poc-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        .poc-table th {
+            background: #333;
+            font-weight: bold;
+        }
+        .poc-table tr:hover {
+            background: #333;
+        }
+        .poc-checkbox {
+            margin-right: 8px;
+        }
+        .severity-high { color: #ff4444; }
+        .severity-medium { color: #ffaa00; }
+        .severity-low { color: #44ff44; }
+        .severity-info { color: #4488ff; }
+        .poc-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        .scan-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100%;
+            background: #2a2a2a;
+            border-left: 1px solid #444;
+            transition: right 0.3s ease;
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .scan-panel.open {
+            right: 0;
+        }
+        .scan-panel h3 {
+            margin-top: 0;
+        }
+        .selected-pocs {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .target-input {
+            width: 100%;
+            height: 100px;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Dscan攻击面管理系统 - POC管理</h1>
+            <div class="nav">
+                <a href="/">首页</a>
+                <a href="/logs">日志</a>
+                <a href="/reports">报告</a>
+                <a href="/scan">新建扫描</a>
+                <a href="/poc-management" class="active">POC管理</a>
+                <a href="/scheduled-tasks">定时任务</a>
+                <a href="/search_engine">搜索引擎</a>
+            </div>
+        </div>
+
+        <div class="poc-container">
+            <div class="poc-header">
+                <h2>POC文件管理</h2>
+                <div class="poc-controls">
+                    <input type="text" id="searchInput" class="poc-search" placeholder="搜索POC名称...">
+                    <select id="categoryFilter" class="poc-filter">
+                        <option value="">所有分类</option>
+                    </select>
+                    <div class="poc-upload">
+                        <input type="file" id="fileInput" accept=".yaml,.yml">
+                        <button class="btn" onclick="document.getElementById('fileInput').click()">上传POC</button>
+                    </div>
+                    <button class="btn" id="scanBtn" onclick="openScanPanel()">扫描选中POC</button>
+                </div>
+            </div>
+
+            <table class="poc-table" id="pocTable">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll"> 全选</th>
+                        <th>POC名称</th>
+                        <th>分类</th>
+                        <th>作者</th>
+                        <th>严重性</th>
+                        <th>描述</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="pocTableBody">
+                    <!-- POC列表将通过JavaScript动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 扫描面板 -->
+    <div class="scan-panel" id="scanPanel">
+        <h3>使用选中POC进行扫描</h3>
+        <button class="btn btn-small" onclick="closeScanPanel()" style="float: right;">关闭</button>
+        
+        <div>
+            <label>选中的POC (<span id="selectedCount">0</span>个):</label>
+            <div class="selected-pocs" id="selectedPocs">
+                <!-- 选中的POC列表 -->
+            </div>
+        </div>
+
+        <div>
+            <label>扫描目标 (每行一个):</label>
+            <textarea class="target-input" id="targetInput" placeholder="http://example.com\nhttp://test.com"></textarea>
+        </div>
+
+        <button class="btn" onclick="startScan()" style="width: 100%; margin-top: 10px;">开始扫描</button>
+    </div>
+
+    <script>
+        let allPocs = [];
+        let selectedPocs = [];
+        let categories = new Set();
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPocs();
+            setupEventListeners();
+        });
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 搜索输入
+            document.getElementById('searchInput').addEventListener('input', filterPocs);
+            
+            // 分类过滤
+            document.getElementById('categoryFilter').addEventListener('change', filterPocs);
+            
+            // 全选复选框
+            document.getElementById('selectAll').addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('.poc-checkbox');
+                checkboxes.forEach(cb => cb.checked = this.checked);
+                updateSelectedPocs();
+            });
+            
+            // 文件上传
+            document.getElementById('fileInput').addEventListener('change', uploadPoc);
+        }
+
+        // 加载POC列表
+        function loadPocs() {
+            fetch('/api/pocs')
+                .then(response => response.json())
+                .then(data => {
+                    allPocs = data.pocs || [];
+                    updateCategories();
+                    displayPocs(allPocs);
+                })
+                .catch(error => {
+                    console.error('加载POC失败:', error);
+                    alert('加载POC列表失败');
+                });
+        }
+
+        // 更新分类选项
+        function updateCategories() {
+            categories.clear();
+            allPocs.forEach(poc => categories.add(poc.category));
+            
+            const categoryFilter = document.getElementById('categoryFilter');
+            categoryFilter.innerHTML = '<option value="">所有分类</option>';
+            
+            Array.from(categories).sort().forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categoryFilter.appendChild(option);
+            });
+        }
+
+        // 显示POC列表
+        function displayPocs(pocs) {
+            const tbody = document.getElementById('pocTableBody');
+            tbody.innerHTML = '';
+            
+            pocs.forEach(poc => {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td>' +
+                    '<input type="checkbox" class="poc-checkbox" value="' + poc.file_path + '" onchange="updateSelectedPocs()">' +
+                    '</td>' +
+                    '<td>' + (poc.name || poc.file_name) + '</td>' +
+                    '<td>' + poc.category + '</td>' +
+                    '<td>' + (poc.author || '-') + '</td>' +
+                    '<td><span class="severity-' + poc.severity + '">' + (poc.severity || '-') + '</span></td>' +
+                    '<td title="' + poc.description + '">' + ((poc.description || '').substring(0, 50)) + ((poc.description || '').length > 50 ? '...' : '') + '</td>' +
+                    '<td class="poc-actions">' +
+                    '<button class="btn btn-small" onclick="deletePoc(\'' + poc.file_path + '\')">删除</button>' +
+                    '</td>';
+                tbody.appendChild(row);
+            });
+        }
+
+        // 过滤POC
+        function filterPocs() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            
+            const filtered = allPocs.filter(poc => {
+                const matchSearch = !search || 
+                    poc.name.toLowerCase().includes(search) ||
+                    poc.description.toLowerCase().includes(search) ||
+                    poc.file_name.toLowerCase().includes(search);
+                
+                const matchCategory = !category || poc.category === category;
+                
+                return matchSearch && matchCategory;
+            });
+            
+            displayPocs(filtered);
+        }
+
+        // 更新选中的POC
+        function updateSelectedPocs() {
+            const checkboxes = document.querySelectorAll('.poc-checkbox:checked');
+            selectedPocs = Array.from(checkboxes).map(cb => cb.value);
+            
+            document.getElementById('selectedCount').textContent = selectedPocs.length;
+            
+            const selectedPocsDiv = document.getElementById('selectedPocs');
+            selectedPocsDiv.innerHTML = '';
+            
+            selectedPocs.forEach(pocPath => {
+                const poc = allPocs.find(p => p.file_path === pocPath);
+                if (poc) {
+                    const div = document.createElement('div');
+                    div.textContent = poc.name || poc.file_name;
+                    selectedPocsDiv.appendChild(div);
+                }
+            });
+        }
+
+        // 上传POC
+        function uploadPoc() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/api/pocs', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    loadPocs(); // 重新加载POC列表
+                } else {
+                    alert('上传失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('上传失败:', error);
+                alert('上传失败');
+            })
+            .finally(() => {
+                fileInput.value = ''; // 清空文件输入
+            });
+        }
+
+        // 删除POC
+        function deletePoc(filePath) {
+            if (!confirm('确定要删除这个POC文件吗？')) return;
+            
+            fetch('/api/pocs?file_path=' + encodeURIComponent(filePath), {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    loadPocs(); // 重新加载POC列表
+                } else {
+                    alert('删除失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('删除失败:', error);
+                alert('删除失败');
+            });
+        }
+
+        // 打开扫描面板
+        function openScanPanel() {
+            if (selectedPocs.length === 0) {
+                alert('请先选择要使用的POC');
+                return;
+            }
+            
+            document.getElementById('scanPanel').classList.add('open');
+            updateSelectedPocs();
+        }
+
+        // 关闭扫描面板
+        function closeScanPanel() {
+            document.getElementById('scanPanel').classList.remove('open');
+        }
+
+        // 开始扫描
+        function startScan() {
+            const targets = document.getElementById('targetInput').value
+                .split('\n')
+                .map(t => t.trim())
+                .filter(t => t);
+            
+            if (targets.length === 0) {
+                alert('请输入扫描目标');
+                return;
+            }
+            
+            if (selectedPocs.length === 0) {
+                alert('请选择要使用的POC');
+                return;
+            }
+            
+            const scanData = {
+                targets: targets,
+                pocs: selectedPocs
+            };
+            
+            fetch('/api/scan-with-pocs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(scanData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    closeScanPanel();
+                    // 可以跳转到日志页面查看扫描进度
+                    window.location.href = '/logs';
+                } else {
+                    alert('启动扫描失败: ' + (data.error || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('启动扫描失败:', error);
+                alert('启动扫描失败');
+            });
+        }
+    </script>
+</body>
+</html>

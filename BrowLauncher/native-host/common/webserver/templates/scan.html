@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Dscan攻击面管理系统 - 新建扫描</h1>
+            <div class="nav">
+                <a href="/">首页</a>
+                <a href="/logs">日志</a>
+                <a href="/reports">报告</a>
+                <a href="/scan">新建扫描</a>
+                <a href="/scheduled-tasks">定时任务</a>
+                <a href="/search_engine">搜索引擎</a>
+            </div>
+        </div>
+        
+        {{if .Message}}
+        <div class="alert alert-danger">
+            <strong>错误:</strong> {{.Message}}
+        </div>
+        {{end}}
+        
+        <div class="card">
+            <h2>配置扫描参数</h2>
+            <form action="/scan" method="post">
+                <div class="form-group">
+                    <label for="target">目标 (IP/域名/URL)</label>
+                    <input type="text" id="target" name="target" placeholder="例如: 192.168.0.1 或 example.com 或 https://example.com" required>
+                    <small style="display: block; margin-top: 5px; color: #78909c;">支持多种格式: 单个IP、IP段、域名、URL、CIDR等</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="port">端口 (可选)</label>
+                    <input type="text" id="port" name="port" placeholder="例如: 80,443,8080 或留空使用默认TOP1000端口">
+                    <small style="display: block; margin-top: 5px; color: #78909c;">不填写则使用默认TOP1000端口扫描</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="options">其他选项 (可选)</label>
+                    <textarea id="options" name="options" placeholder="例如: -Pn -nb --hunter"></textarea>
+                    <small style="display: block; margin-top: 5px; color: #78909c;">每个选项用空格分隔，格式与命令行参数相同</small>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="clearForm()">清空表单</button>
+                    <button type="submit" class="btn">开始扫描</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="card">
+            <h2>常用参数说明</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">参数</th>
+                        <th style="width: 60%;">说明</th>
+                        <th style="width: 20%;">示例</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>-p</code></td>
+                        <td>指定扫描端口</td>
+                        <td><code>-p 80,443,8080</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-Pn</code></td>
+                        <td>禁用主机发现功能，直接扫描所有目标</td>
+                        <td><code>-Pn</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-nb</code></td>
+                        <td>禁用服务爆破</td>
+                        <td><code>-nb</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-sd</code></td>
+                        <td>开启子域名枚举</td>
+                        <td><code>-sd</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--hunter</code></td>
+                        <td>从Hunter中获取资产，指定的目标将被视为Hunter搜索关键词</td>
+                        <td><code>--hunter</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--fofa</code></td>
+                        <td>从Fofa中获取资产，指定的目标将被视为Fofa搜索关键词</td>
+                        <td><code>--fofa</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>-ho</code></td>
+                        <td>指定HTML漏洞报告的名称</td>
+                        <td><code>-ho report.html</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 15px;">
+                <p><strong>提示:</strong> 启动扫描后，可以在 <a href="/logs">日志页面</a> 查看实时扫描进度</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>https://github.com/kk12-30/Dscan</p>
+        </div>
+    </div>
+    
+    <script>
+    function clearForm() {
+        document.getElementById('target').value = '';
+        document.getElementById('port').value = '';
+        document.getElementById('options').value = '';
+    }
+    </script>
+</body>
+</html>
