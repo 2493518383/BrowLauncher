@@ -4,30 +4,42 @@
 安装教程：
 浏览器点击管理插件拓展，打开浏览器插件的开发者模式，点击加载已解压的插件程序（每个浏览器的名称可能都不一样请您自行判断）
 <img width="700" height="100" alt="image" src="https://github.com/user-attachments/assets/98c03398-3708-4a7c-a29d-81e76cc2e551" />
+
 加载的一定是extension目录下的
 <img width="350" height="110" alt="image" src="https://github.com/user-attachments/assets/e799c634-29a2-441f-a635-561bd8f66ba0" />
 
 进入native-host目录
+
 <img width="500" height="210" alt="image" src="https://github.com/user-attachments/assets/927c0692-295b-4589-926f-321ff87916a4" />
+
 打开install.bat程序
+
 <img width="430" height="350" alt="image" src="https://github.com/user-attachments/assets/ff05a9ee-9619-402a-9978-078dccd2e579" />
 
 install.bat中的ID值在这里
+
 <img width="900" height="500" alt="image" src="https://github.com/user-attachments/assets/010e4cc9-fec4-4d90-ba62-85a50e230d07" />
 
 图文说明：
+
 <img width="310" height="280" alt="5e1cef9e5a4360329ce43782a4e7de49" src="https://github.com/user-attachments/assets/becb502b-09d0-4745-ab0d-8da28d24b458" />
+
 <img width="310" height="280" alt="ad0b10da7b6b97b159b3291dca25f18b" src="https://github.com/user-attachments/assets/8108bcd6-77e2-4ba6-a8c5-f76e7d1c5a73" />
+
 设置好参数能直接执行扫描
+
 <img width="730" height="320" alt="b81a8ec48873bb4be898b5a2b5c5d038" src="https://github.com/user-attachments/assets/ffcc4b9d-259d-4638-8cc2-5e42563bbafd" />
+
 记事本你可以改成你的notebook路径
+
 <img width="310" height="280" alt="3e8c1b51a2065ca031ca17aa3654d9d6" src="https://github.com/user-attachments/assets/edd054e7-0122-4a34-bb4d-3e389b6130f8" />
 
 作者是菜鸟，各位大佬勿喷！！！有问题可以跟我提，本人认真学习您！本人wx：byzy1010
 
 为爱发电，赏0.01也是钱！！！太感谢您的赏赐了，狠狠奖励我！
-<img width="210" height="230" alt="image" src="https://github.com/user-attachments/assets/6f20ba44-7bd8-429d-8151-cfcb0b6942ac" />
-<img width="220" height="210" alt="image" src="https://github.com/user-attachments/assets/f90905d6-b891-4066-8556-75390f89f118" />
+
+<img width="210" height="230" alt="image" src="https://github.com/user-attachments/assets/6f20ba44-7bd8-429d-8151-cfcb0b6942ac" /><img width="220" height="210" alt="image" src="https://github.com/user-attachments/assets/f90905d6-b891-4066-8556-75390f89f118" />
+
 
 
 
